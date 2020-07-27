@@ -4,6 +4,8 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 
 public class NetworkService {
 
@@ -33,16 +35,34 @@ public class NetworkService {
     }
 
     public String sendAuthMessage(String login, String password) throws IOException {
-        out.writeUTF(String.format("%s %s %s", AUTH_COMMAND, login, password));
-        return in.readUTF();
+        if(CompileType.isIO){
+            out.writeUTF(String.format("%s %s %s", AUTH_COMMAND, login, password));
+            return in.readUTF();
+        }
+        else {
+            out.write(String.format("%s %s %s", AUTH_COMMAND, login, password).getBytes());
+            byte[] buffer = new byte[1024];
+            in.read(buffer);
+            String s = new String(buffer, StandardCharsets.UTF_8);
+            return s;
+        }
     }
 
     public void sendMessage(String message) throws IOException {
-        out.writeUTF(message);
+        if(CompileType.isIO) out.writeUTF(message);
+        else {
+            out.write(message.getBytes());
+        }
     }
 
     public String readMessage() throws IOException {
-        return in.readUTF();
+        if(CompileType.isIO) return in.readUTF();
+        else{
+            byte[] buffer = new byte[8192];
+            in.read(buffer);
+            String s = new String(buffer, StandardCharsets.UTF_8);
+            return s;
+        }
     }
 
     public long readLong() throws IOException {

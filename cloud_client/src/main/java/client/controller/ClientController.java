@@ -1,5 +1,6 @@
 package client.controller;
 
+import client.CompileType;
 import client.NetworkService;
 import common.FileUtility;
 
@@ -75,15 +76,14 @@ public class ClientController {
                     break;
                 }
             }
-        }catch (IOException e){
+        }catch (IOException | InterruptedException e){
             e.printStackTrace();
         }
     }
 
-    public void downloadFile(String fileName, String destinationPath) throws IOException {
+    public void downloadFile(String fileName, String destinationPath) throws IOException, InterruptedException {
         networkService.sendMessage(fileName);
         long fileSize = networkService.readLong();
-
         File destination = FileUtility.createDirectory(destinationPath);
         File downloadFile = FileUtility.createFile(destination.getAbsolutePath() + "/" + fileName);
         try (FileOutputStream fileOutputStream = new FileOutputStream(downloadFile)){
@@ -103,13 +103,13 @@ public class ClientController {
         System.out.println("Download is completed");
     }
 
-    public void uploadFile(String fileName) throws IOException {
+    public void uploadFile(String fileName) throws IOException, InterruptedException {
         File uploadFile = FileUtility.createFile(fileName);
         networkService.sendMessage(uploadFile.getName());
 
         long fileSize = uploadFile.length();
         networkService.writeLong(fileSize);
-
+        if(!CompileType.isIO) Thread.sleep(2000);
         try (FileInputStream fileInputStream = new FileInputStream(uploadFile)) {
             byte[] bufferOut = new byte[8192];
             for(long i = 0l, nbytes = 0l; i < fileSize; ){
@@ -130,10 +130,16 @@ public class ClientController {
     public void printFileList() throws IOException {
         String filelist = null;
         System.out.println("Cloud dir:");
-        do{
+        if(CompileType.isIO) {
+            do {
+                filelist = networkService.readMessage();
+                System.out.println(filelist);
+            } while (!filelist.equals(NetworkService.END_OF_LIST_STRING));
+        }
+        else{
             filelist = networkService.readMessage();
             System.out.println(filelist);
-        }while (!filelist.equals(NetworkService.END_OF_LIST_STRING));
+        }
     }
 
     public void shutdown() {
